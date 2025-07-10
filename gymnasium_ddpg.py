@@ -7,7 +7,9 @@ from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
 
 from envs import KesslerEnv
-from kesslergame import KesslerGame, Scenario, TrainerEnvironment, KesslerController, StopReason
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame,TrainerEnvironment, StopReason
+from src.scenario import Scenario
 from typing import Dict, Tuple
 import numpy as np
 

@@ -1,12 +1,12 @@
 from typing import Dict, Tuple
 
 import numpy as np
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame, TrainerEnvironment
 
-from kesslergame import KesslerController, TrainerEnvironment, KesslerGame
-
-from src.envs.radar_env import get_radar
-from src.lib import parse_game_state
-from src.navigation_scenario import scenario_D, scenario_E, scenario_F, simple_scenario
+from envs.radar_env import get_radar
+from lib import parse_game_state
+from navigation_scenario import scenario_D, scenario_E, scenario_F, simple_scenario
 
 # Inputs
 # 12 point radar

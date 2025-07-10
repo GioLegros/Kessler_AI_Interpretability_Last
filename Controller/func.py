@@ -1,6 +1,6 @@
 import math
 from typing import Tuple, Dict
-from kesslergame import Ship
+from src.ship import Ship
 import numpy as np
 
 def asteroid_dist(self, ownship: Ship, input_data: Dict[str, Tuple]) -> float:

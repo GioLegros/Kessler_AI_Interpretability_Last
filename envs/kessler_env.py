@@ -1,11 +1,13 @@
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from kesslergame import KesslerGame, Scenario, TrainerEnvironment, KesslerController, StopReason
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame, StopReason, TrainerEnvironment
+from src.scenario import Scenario
 from typing import Dict, Tuple
-from collections import deque
-from src.center_coords import center_coords
-from src.reward.stay_alive import stay_alive_reward
+from collections import deque 
+from center_coords import center_coords
+from reward.stay_alive import stay_alive_reward
 
 THRUST_SCALE, TURN_SCALE = 480.0, 180.0
 ASTEROID_MAX_SPEED = 180

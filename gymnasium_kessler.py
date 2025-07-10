@@ -5,7 +5,9 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.env_util import make_vec_env
 from envs import KesslerEnv
-from kesslergame import KesslerGame, Scenario, TrainerEnvironment, KesslerController, StopReason
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame, StopReason, TrainerEnvironment
+from src.scenario import Scenario
 from typing import Dict, Tuple
 import numpy as np
 

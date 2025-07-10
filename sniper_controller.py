@@ -1,10 +1,11 @@
 from typing import Dict, Tuple
 
 import numpy as np
-from kesslergame import KesslerGame, KesslerController, Scenario
-
-from src.center_coords import c2p
-from src.lib import parse_game_state
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
+from src.scenario import Scenario
+from center_coords import c2p
+from lib import parse_game_state
 
 
 class SniperController(KesslerController):

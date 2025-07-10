@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.center_coords import center_coords
+from center_coords import center_coords
 
 
 def parse_game_state(ship_state, game_state, forecast_seconds=1):

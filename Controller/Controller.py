@@ -1,5 +1,6 @@
 import math
-from kesslergame import KesslerController, Ship
+from src.controller import KesslerController
+from src.ship import Ship
 import numpy as np
 from typing import Dict, Tuple, Any
 from func import ast_angle, angle360

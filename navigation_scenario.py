@@ -1,6 +1,7 @@
 import numpy as np
 
-from kesslergame import Scenario, TrainerEnvironment
+from src.scenario import Scenario
+from src.kessler_game import TrainerEnvironment
 
 
 ###

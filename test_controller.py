@@ -1,6 +1,9 @@
 import time
 from typing import Dict, Tuple
-from kesslergame import KesslerController, KesslerGame, Scenario, StopReason
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame, StopReason
+from src.scenario import Scenario
+
 from navigation_scenario import *
 
 # See: https://github.com/ThalesGroup/kessler-game/blob/main/examples/test_controller.py

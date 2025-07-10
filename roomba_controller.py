@@ -1,9 +1,11 @@
 from typing import Dict, Tuple
 
 import numpy as np
-from kesslergame import KesslerGame, KesslerController, Scenario
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
+from src.scenario import Scenario
 
-from src.lib import parse_game_state
+from lib import parse_game_state
 
 
 class RoombaController(KesslerController):

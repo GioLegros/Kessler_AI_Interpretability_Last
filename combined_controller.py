@@ -1,12 +1,14 @@
 from typing import Dict, Tuple
 
 import numpy as np
-from kesslergame import KesslerGame, KesslerController, Scenario
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
+from src.scenario import Scenario
 
-from src.lib import parse_game_state
-from src.roomba_controller import RoombaController
-from src.global_controller import GlobalController
-from src.sniper_controller import SniperController
+from lib import parse_game_state
+from roomba_controller import RoombaController
+from global_controller import GlobalController
+from sniper_controller import SniperController
 
 class CombinedController(KesslerController):
     def __init__(self):

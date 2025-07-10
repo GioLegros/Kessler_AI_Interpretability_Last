@@ -1,10 +1,12 @@
 from typing import Dict, Tuple
 
 import numpy as np
-from kesslergame import KesslerGame, KesslerController, Scenario
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
+from src.scenario import Scenario
 
-from src.lib import parse_game_state
-from src.rule2string import rule2string
+from lib import parse_game_state
+from rule2string import rule2string
 
 FUZZY_SETS = [
     # Triangular fuzzy sets can be defined as functions of their center and radius

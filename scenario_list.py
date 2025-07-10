@@ -1,6 +1,6 @@
 # Copyright (c) 2021 TimArnettThales
 # This file is taken from FuzzyChallenge2021 and modified.
-from kesslergame import Scenario
+from src.scenario import Scenario
 
 import numpy as np
 

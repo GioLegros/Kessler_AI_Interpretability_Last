@@ -1,9 +1,9 @@
 from typing import Dict, Tuple
 
-from kesslergame import KesslerController
+from src.kessler_game import KesslerController
 from stable_baselines3 import PPO
 
-from src.envs.radar_env import get_obs, THRUST_SCALE, TURN_SCALE
+from envs.radar_env import get_obs, THRUST_SCALE, TURN_SCALE
 
 class PPODummy(KesslerController):
     def __init__(self, model_name):

@@ -1,11 +1,13 @@
 import numpy as np
 from typing import Dict, Tuple
-from kesslergame import KesslerController, KesslerGame, Scenario
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
+from src.scenario import Scenario
 
-from src.envs.radar_env import get_obs, THRUST_SCALE, TURN_SCALE
-from src.fuzzy import get_output
-from src.fuzzy_rule_extractor import EXTRACTION_SCALE
-from src.navigation_scenario import simple_scenario, scenario_D
+from envs.radar_env import get_obs, THRUST_SCALE, TURN_SCALE
+from fuzzy import get_output
+from fuzzy_rule_extractor import EXTRACTION_SCALE
+from navigation_scenario import simple_scenario, scenario_D
 
 
 class ExampleFuzzyController(KesslerController):

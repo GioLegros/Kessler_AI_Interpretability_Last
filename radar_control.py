@@ -2,14 +2,15 @@ import os
 import numpy as np
 from typing import Dict, Tuple
 
-from kesslergame import KesslerGame, KesslerController
+from src.controller import KesslerController
+from src.kessler_game import KesslerGame
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 
-from src.envs.radar_env import RadarEnv, get_obs
-from src.navigation_scenario import *
+from envs.radar_env import RadarEnv, get_obs
+from navigation_scenario import *
 
 THRUST_SCALE, TURN_SCALE = 480.0, 180.0
 
