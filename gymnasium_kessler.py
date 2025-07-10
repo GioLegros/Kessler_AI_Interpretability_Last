@@ -13,8 +13,18 @@ import numpy as np
 
 THRUST_SCALE, TURN_SCALE = 480.0, 180.0
 
+threat_test_1 = Scenario(
+    time_limit=60,
+    name="threat_test_1",
+    asteroid_states=[{"position": (0, 300), "angle": -90.0, "speed": 40},
+                     {"position": (700, 300), "angle": 0.0, "speed": 0},
+                     ],
+    ship_states=[{"position": (600, 300)}, ],
+    seed=0
+)
+
 def train():
-    kessler_env = Monitor(KesslerEnv())
+    kessler_env = Monitor(KesslerEnv(threat_test_1))
 #    kessler_env = make_vec_env(KesslerEnv, n_envs=4)
 #    kessler_env = DummyVecEnv([lambda: kessler_env])
 #    check_env(kessler_env, warn=True)

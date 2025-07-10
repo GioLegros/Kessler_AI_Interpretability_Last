@@ -14,10 +14,10 @@ import numpy as np
 from kesslergame import KesslerGame, KesslerController, Scenario, TrainerEnvironment
 from stable_baselines3 import PPO
 
-from src.dummy_controller import PPODummy
-from src.envs.radar_env import get_obs
-from src.fuzzy import FUZZY_SETS, get_output, heuristic_weights, heuristic_set
-from src.navigation_scenario import simple_scenario, scenario_D
+from dummy_controller import PPODummy
+from envs.radar_env import get_obs
+from fuzzy import FUZZY_SETS, get_output, heuristic_weights, heuristic_set
+from navigation_scenario import simple_scenario, scenario_D
 
 BATCH_SIZE = 8_000
 EPOCH_SIZE = 10

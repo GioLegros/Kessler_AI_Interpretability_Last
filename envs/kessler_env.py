@@ -17,7 +17,7 @@ N_CLOSEST_ASTEROIDS = 5
 class KesslerEnv(gym.Env):
     def __init__(self, scenario):
         self.controller = DummyController()
-        self.kessler_game = TrainerEnvironment()
+        self.kessler_game = KesslerGame()
         self.scenario = scenario
         self.reward_function = stay_alive_reward
         self.game_generator = self.kessler_game.run_step(scenario=self.scenario, controllers=[self.controller])
