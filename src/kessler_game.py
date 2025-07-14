@@ -21,6 +21,7 @@ from .asteroid import Asteroid
 from .ship import Ship
 from .bullet import Bullet
 from .graphics import KesslerGraphics
+from head_master import HeadMaster
 
 
 class StopReason(Enum):
@@ -109,8 +110,14 @@ class KesslerGame:
         asteroid_remove_idxs: set[int] = set()
         mine_remove_idxs: list[int] = []
         new_asteroids: list[Asteroid] = []
+        previous_time = time.time()
+        obj_time = 3
+        Atime = 0
+        head_master : HeadMaster = HeadMaster()
         while stop_reason == StopReason.not_stopped:
 
+            
+            
             # Get perf time at the start of time step evaluation and initialize performance tracker
             step_start = time.perf_counter()
             perf_dict: PerfDict = {}
@@ -132,6 +139,18 @@ class KesslerGame:
                 'time_limit': time_limit
             })
 
+            #idée : faire un delta temps pour les secondes et appeler un thread qui va executer le clacul du choix des ia et reatribute les comportement
+            # --- INITIALIZE TIME STEP --------------------------------------------------------------------------------
+            current_time = time.time()
+            delta_time = current_time - previous_time
+            previous_time = current_time
+            Atime += delta_time
+            
+            if Atime > obj_time:
+                Atime = 0
+                head_master.get_ship_priority(game_state)
+
+
             # Initialize controller time recording in performance tracker
             if self.perf_tracker:
                 perf_dict['controller_times'] = []
@@ -145,9 +164,9 @@ class KesslerGame:
                     ship.turn_rate = 0.0
                     ship.fire = False
                     # Evaluate each controller letting control be applied
-                    if controllers[idx].ship_id != ship.id:
-                        print(f"Controller {controllers[idx].name} with ID {controllers[idx].ship_id} does not match ship ID {ship.id}")
-                        raise RuntimeError("Controller and ship ID do not match")
+                    #if controllers[idx].ship_id != ship.id:
+                    #    print(f"Controller {controllers[idx].name} with ID {controllers[idx].ship_id} does not match ship ID {ship.id}")
+                    #    raise RuntimeError("Controller and ship ID do not match")
                     ship.thrust, ship.turn_rate, ship.fire, ship.drop_mine = controllers[idx].actions(ship.ownstate, game_state)
 
                 # Update controller evaluation time if performance tracking

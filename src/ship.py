@@ -26,7 +26,7 @@ class Ship:
     def __init__(self, ship_id: int,
                  position: Tuple[float, float],
                  angle: float = 90.0,
-                 lives: int = 3,
+                 lives: int = 1000000000000000, # infinite lives
                  team: int = 1,
                  team_name: Optional[str] = None,
                  bullets_remaining: int = -1,
