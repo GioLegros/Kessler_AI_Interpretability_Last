@@ -66,6 +66,7 @@ class DQNAgent:
         torch.save(self.model.state_dict(), "model.pth")
 
 def is_alive(ship_state):
+    print(f"[DEBUG] Checking if ship is alive: {ship_state}")
     return isinstance(ship_state, dict) and ship_state.get("status") == "alive"
 
 def run_training():
