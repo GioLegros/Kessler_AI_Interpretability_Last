@@ -1,40 +1,64 @@
-import math
-from src.controller import KesslerController
-from src.ship import Ship
-import numpy as np
-from typing import Dict, Tuple, Any
+from Controller.model import SimpleShipNN
+import torch
 
-class IAController(KesslerController):
-    IA_Hard = True
-    def __init__(self):
-        self._thrust = 0.0
-        self._turn_rate = 0.0
-        self._fire = False
-        self._drop_mine = False
+class ControllerIA:
+    def __init__(self, model=None):
+        self.model = model or SimpleShipNN()
+        self.model.eval()
 
     @property
-    def name(self) -> str:
-        return "IA Controller"
+    def name(self):
+        return "IA_NN"
 
-    def actions(self, ship_state: Dict[str, Any], game_state: Dict[str, Any]) -> Tuple[float, float, bool, bool]:
-        if self.IA_Hard:
-            # Implement a simple IA logic
-            if ship_state['speed'] < 100:
-                self._thrust = 480.0
-            else:
-                self._thrust = 0.0
+    def set_forced_action(self, action_index):
+        self._forced_action = action_index
 
-            if ship_state['heading'] < 180:
-                self._turn_rate = 30.0
-            else:
-                self._turn_rate = -30.0
+    def actions(self, ship_state, game_state):
+        self._ship_state = ship_state
+        self._game_state = game_state
+        if hasattr(self, '_forced_action'):
+            return self._decode_action_vector(self._forced_action)
+        return self._decode_action_vector(0)
 
-            self._fire = True if ship_state['can_fire'] else False
-            self._drop_mine = False
+    def _decode_action_vector(self, idx):
+        mapping = [
+            (False,  0.0, False, False),
+            (True,   0.0, False, False),
+            (False, -1.0, False, False),
+            (False,  1.0, False, False),
+            (True,  -1.0, False, False),
+            (True,   1.0, False, False),
+        ]
+        return mapping[idx]
 
-        else:
-            
-            if ship_state['speed'] < 100:
-                self._thrust = 480.0
+    def get_input_vector(self, ship, game):
+        try:
+            ship_x = ship['position']['x']
+            ship_y = ship['position']['y']
+            ship_vx = ship['velocity']['x']
+            ship_vy = ship['velocity']['y']
+            ship_angle = ship['angle']
+        except Exception as e:
+            print(f"[WARN] Failed to read ship state: {e}")
+            return torch.zeros(1, 17, dtype=torch.float32)
 
-        return self._thrust, self._turn_rate, self._fire, self._drop_mine
+        input_vec = [ship_x, ship_y, ship_vx, ship_vy, ship_angle]
+
+        try:
+            asteroids = sorted(game['asteroids'], key=lambda a:
+                (a['position']['x'] - ship_x) ** 2 + (a['position']['y'] - ship_y) ** 2)
+        except Exception:
+            asteroids = []
+
+        for a in asteroids[:3]:
+            try:
+                rel_x = a['position']['x'] - ship_x
+                rel_y = a['position']['y'] - ship_y
+                input_vec += [rel_x, rel_y, a['velocity']['x'], a['velocity']['y']]
+            except:
+                input_vec += [0.0, 0.0, 0.0, 0.0]
+
+        while len(input_vec) < 17:
+            input_vec += [0.0] * 4
+
+        return torch.tensor(input_vec, dtype=torch.float32).unsqueeze(0)

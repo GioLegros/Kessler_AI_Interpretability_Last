@@ -148,7 +148,7 @@ class KesslerGame:
             
             if Atime > obj_time:
                 Atime = 0
-                head_master.get_ship_priority(game_state)
+                #head_master.get_ship_priority(game_state)
 
 
             # Initialize controller time recording in performance tracker
