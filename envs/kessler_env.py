@@ -5,7 +5,7 @@ from src.controller import KesslerController
 from src.kessler_game import KesslerGame, StopReason, TrainerEnvironment
 from src.scenario import Scenario
 from typing import Dict, Tuple
-from collections import deque 
+from collections import deque
 from center_coords import center_coords
 from reward.stay_alive import stay_alive_reward
 
@@ -40,20 +40,27 @@ class KesslerEnv(gym.Env):
         super().reset(seed=seed, options=options)
         self.game_generator = self.kessler_game.run_step(scenario=self.scenario, controllers=[self.controller])
         score, perf_list, game_state = next(self.game_generator)
-        self.prev_state, self.current_state = None, game_state
 
+        # Vérification de l'état du jeu
+        if 'ships' not in game_state or 'asteroids' not in game_state:
+            raise ValueError("État du jeu mal formé")
+
+        self.prev_state, self.current_state = None, game_state
         return get_obs(game_state), self._get_info()
 
     def step(self, action):
         # Just always fire, for now...
         thrust, turn_rate, fire, drop_mine = action[0] * THRUST_SCALE, action[1] * TURN_SCALE, False, False
         self.controller.action_queue.append(tuple([thrust, turn_rate, fire, drop_mine]))
+
         try:
             score, perf_list, game_state = next(self.game_generator)
             terminated = False
         except StopIteration as exp:
+            print("StopIteration capturée")
             score, perf_list, game_state = list(exp.args[0])
             terminated = True
+
         self.update_state(game_state)
         return get_obs(game_state), self.reward_function(game_state, self.prev_state), terminated, False, self._get_info()
 
@@ -65,27 +72,49 @@ class KesslerEnv(gym.Env):
         return {}
 
 def get_obs(game_state):
-    # For now, we are assuming only one ship (ours)
+    # Pour l'instant, on suppose qu'il n'y a qu'un seul vaisseau (le nôtre)
     ship = game_state['ships'][0]
     asteroids = game_state['asteroids']
+    map_size = game_state['map_size']
+
+    # Vérification des données du vaisseau
+    if np.any(np.isnan(ship['position'])) or np.any(np.isnan(ship['heading'])):
+        raise ValueError("NaN dans les données du vaisseau")
 
     asteroid_positions = np.array([asteroid['position'] for asteroid in asteroids])
-    rho, phi, x, y = center_coords(ship['position'], ship['heading'], asteroid_positions)
+
+    # Vérification des positions des astéroïdes
+    if np.any(np.isnan(asteroid_positions)):
+        raise ValueError("NaN dans les positions des astéroïdes")
+
+    coords = center_coords(ship['position'], ship['heading'], asteroid_positions, map_size)
+
+    if coords.shape[1] == 2:
+        rho, phi = coords[:, 0], coords[:, 1]
+        x, y = None, None
+    elif coords.shape[1] == 4:
+        rho, phi, x, y = coords[:, 0], coords[:, 1], coords[:, 2], coords[:, 3]
 
     asteroid_velocities = np.array([asteroid['velocity'] for asteroid in asteroids])
+
+    # Vérification des vitesses des astéroïdes
+    if np.any(np.isnan(asteroid_velocities)):
+        raise ValueError("NaN dans les vitesses des astéroïdes")
+
     asteroid_velocities_relative = asteroid_velocities - ship['velocity']
     asteroid_speed_relative = np.linalg.norm(asteroid_velocities_relative, axis=1)
 
-    asteroid_info = np.stack([
-        rho, phi, asteroid_speed_relative
-    ], axis=1)
+    asteroid_info = np.stack([rho, phi, asteroid_speed_relative], axis=1)
 
-    # Sort by first column (distance)
-    asteroid_info = asteroid_info[
-        asteroid_info[:, 0].argsort()
-    ]
+    # Si des NaN sont détectés, on les transforme en zéro et on affiche un message de débogage
+    if np.any(np.isnan(asteroid_info)):
+        print("NaN détecté dans les informations des astéroïdes.")
+        asteroid_info = np.nan_to_num(asteroid_info)
 
-    # Pad
+    # Trier par la première colonne (distance)
+    asteroid_info = asteroid_info[asteroid_info[:, 0].argsort()]
+
+    # Padding
     padding_len = N_CLOSEST_ASTEROIDS - asteroid_info.shape[0]
     if padding_len > 0:
         pad_shape = (padding_len, asteroid_info.shape[1])
@@ -99,6 +128,12 @@ def get_obs(game_state):
         "ship_speed": np.array([ship["speed"]]),
     }
 
+    coords = center_coords(ship['position'], ship['heading'], asteroid_positions, map_size)
+
+    # Vérification finale des observations avant de les retourner
+    if np.any(np.isnan(obs["asteroid_dist"])) or np.any(np.isnan(obs["asteroid_angle"])) or np.any(np.isnan(obs["asteroid_rel_speed"])) or np.any(np.isnan(coords)):
+        raise ValueError("NaN détecté dans les observations avant de les retourner.")
+
     return obs
 
 
@@ -108,6 +143,11 @@ class DummyController(KesslerController):
         self.action_queue = deque()
 
     def actions(self, ship_state: Dict, game_state: Dict) -> Tuple[float, float, bool, bool]:
+        # Si la file est vide, on ajoute une action par défaut
+        if not self.action_queue:
+            self.action_queue.append((0.0, 0.0, False, False))  # Action par défaut
+            print("File d'actions vide, ajout d'une action par défaut")
+
         return self.action_queue.popleft()
 
     def name(self) -> str:

@@ -57,7 +57,7 @@ class GraphicsTK(KesslerGraphics):
 
         # create and center main window
         self.window = Tk()
-        self.window.title('Kessler')
+        self.window.title('Kessler - OMU Dev Fork')
         screen_width = self.window.winfo_screenwidth()
         screen_height = self.window.winfo_screenheight()
         center_x = int(screen_width / 2 - self.window_width / 2)
@@ -73,15 +73,13 @@ class GraphicsTK(KesslerGraphics):
         default_images = ["playerShip1_green.png",
                             "playerShip1_orange.png",
                             "playerShip2_orange.png",
-                            "playerShip3_orange.png"
-                            ]
+                            "playerShip3_orange.png"]
 
         img_list = []
         for file in os.listdir(self.img_dir):
             if file.endswith(".png") or file.endswith(".jpg"):
                 img_list.append(file)
         img_list2 = self.sort_list(default_images, img_list)
-        print(f"Sorted image list: {img_list2}")
         self.image_paths = [os.path.join(self.img_dir, img) for img in img_list2]
 
         self.num_images = len(self.image_paths)

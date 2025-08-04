@@ -14,14 +14,13 @@ from immutabledict import immutabledict
 from .scenario import Scenario
 from .score import Score
 from .controller import KesslerController
-from .collisions import circle_line_collision
+from .collisions import circle_line_collision_continuous
 from .graphics import GraphicsType, GraphicsHandler
 from .mines import Mine
 from .asteroid import Asteroid
 from .ship import Ship
 from .bullet import Bullet
 from .graphics import KesslerGraphics
-from head_master import HeadMaster
 
 
 class StopReason(Enum):
@@ -66,10 +65,18 @@ class KesslerGame:
             self.UI_settings = {'ships': True, 'lives_remaining': True, 'accuracy': True,
                                 'asteroids_hit': True, 'shots_fired': True, 'bullets_remaining': True,
                                 'controller_name': True}
-        
-    def run(self, scenario: Scenario, controllers: List[KesslerController]) -> Tuple[Score, List[PerfDict]]:
+
+    def run(self, scenario: Scenario, controllers: List[KesslerController]) -> (Score, OrderedDict): # type: ignore
+        generator = self.run_step(scenario, controllers)
+        while True:
+            try:
+                score, perf_list, game_state = next(generator)
+            except StopIteration as exp:
+                return score, perf_list, game_state
+
+    def run_step(self, scenario: Scenario, controllers: List[KesslerController]):
         """
-        Run an entire scenario from start to finish and return score and stop reason
+        Returns a generator that yields the score, perf_list, and game_state for each time step
         """
 
         ##################
@@ -110,14 +117,8 @@ class KesslerGame:
         asteroid_remove_idxs: set[int] = set()
         mine_remove_idxs: list[int] = []
         new_asteroids: list[Asteroid] = []
-        previous_time = time.time()
-        obj_time = 3
-        Atime = 0
-        head_master : HeadMaster = HeadMaster()
         while stop_reason == StopReason.not_stopped:
 
-            
-            
             # Get perf time at the start of time step evaluation and initialize performance tracker
             step_start = time.perf_counter()
             perf_dict: PerfDict = {}
@@ -135,21 +136,16 @@ class KesslerGame:
                 'map_size': scenario.map_size,
                 'time': sim_time,
                 'delta_time': self.time_step,
+                'frame_rate': self.frequency,
                 'sim_frame': step,
-                'time_limit': time_limit
+                'time_limit': time_limit,
+                'random_asteroid_splits': self.random_ast_splits
             })
 
-            #idée : faire un delta temps pour les secondes et appeler un thread qui va executer le clacul du choix des ia et reatribute les comportement
-            # --- INITIALIZE TIME STEP --------------------------------------------------------------------------------
-            current_time = time.time()
-            delta_time = current_time - previous_time
-            previous_time = current_time
-            Atime += delta_time
-            
-            if Atime > obj_time:
-                Atime = 0
-                #head_master.get_ship_priority(game_state)
-
+            # Yield before game pieces have been moved to better mirror the gymnasium API
+            # The first run_step() comes from env.reset(), which should reflect the initial environment state.
+            score.finalize(sim_time, stop_reason, ships)
+            yield score, perf_list, game_state
 
             # Initialize controller time recording in performance tracker
             if self.perf_tracker:
@@ -164,9 +160,8 @@ class KesslerGame:
                     ship.turn_rate = 0.0
                     ship.fire = False
                     # Evaluate each controller letting control be applied
-                    #if controllers[idx].ship_id != ship.id:
-                    #    print(f"Controller {controllers[idx].name} with ID {controllers[idx].ship_id} does not match ship ID {ship.id}")
-                    #    raise RuntimeError("Controller and ship ID do not match")
+                    if controllers[idx].ship_id != ship.id:
+                        raise RuntimeError("Controller and ship ID do not match")
                     ship.thrust, ship.turn_rate, ship.fire, ship.drop_mine = controllers[idx].actions(ship.ownstate, game_state)
 
                 # Update controller evaluation time if performance tracking
@@ -224,7 +219,7 @@ class KesslerGame:
                     if idx_ast in asteroid_remove_idxs:
                         continue
                     # If collision occurs
-                    if circle_line_collision(bullet.position, bullet.tail, asteroid.position, asteroid.radius):
+                    if circle_line_collision_continuous(bullet.position, bullet.tail, bullet.velocity, asteroid.position, asteroid.velocity, asteroid.radius, self.time_step):
                         # Increment hit values on ship that fired bullet then destruct bullet and mark for removal
                         bullet.owner.asteroids_hit += 1
                         bullet.owner.bullets_hit += 1
@@ -383,7 +378,7 @@ class KesslerGame:
         score.finalize(sim_time, stop_reason, ships)
 
         # Return the score and stop condition
-        return score, perf_list
+        return score, perf_list, game_state
 
 
 class TrainerEnvironment(KesslerGame):
