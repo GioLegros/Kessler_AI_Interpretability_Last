@@ -74,11 +74,11 @@ class SuperdummyController(KesslerController):
         # For now, we are assuming only one ship (ours)
         ship = game_state['ships'][0]
         obs = {
-            "ship_position": np.array(ship['position']),
-            "ship_speed": np.array([ship['speed']]),
-            "ship_heading": np.array([ship['heading']]),
+            "ship position": np.array(ship['position']),
+            "ship speed": np.array([ship['speed']]),
+            "ship heading": np.array([ship['heading']]),
         }
-        print(obs['ship_position'])
+        print(obs['ship position'])
         return obs
     
 if __name__ == '__main__':
