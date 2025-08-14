@@ -5,6 +5,8 @@
 
 import math
 
+
+
 def circle_line_collision_continuous(
     line_A: tuple[float, float],
     line_B: tuple[float, float],

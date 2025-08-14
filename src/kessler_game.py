@@ -22,6 +22,7 @@ from .ship import Ship
 from .bullet import Bullet
 from .graphics import KesslerGraphics
 
+DISABLE_SHIP_SHIP_COLLISIONS = True # For demo purposes, we disable ship-ship collisions to avoid the game ending prematurely.
 
 class StopReason(Enum):
     not_stopped = 0
@@ -294,18 +295,19 @@ class KesslerGame:
                 asteroid_remove_idxs.clear()
 
             # --- Check ship-ship collisions ---
-            for i, ship1 in enumerate(liveships):
-                for ship2 in liveships[i + 1:]:
-                    if not ship2.is_respawning and not ship1.is_respawning:
-                        dx = ship1.position[0] - ship2.position[0]
-                        dy = ship1.position[1] - ship2.position[1]
-                        radius_sum = ship1.radius + ship2.radius
-                        # Most of the time no collision occurs, so use early exit to optimize collision check
-                        if abs(dx) <= radius_sum and abs(dy) <= radius_sum and dx * dx + dy * dy <= radius_sum * radius_sum:
-                            ship1.destruct(map_size=scenario.map_size)
-                            ship2.destruct(map_size=scenario.map_size)
-            # Cull ships that are not alive
-            liveships = [ship for ship in liveships if ship.alive]
+            if not DISABLE_SHIP_SHIP_COLLISIONS:# add this flag to disable ship-ship collisions for demo purposes
+                for i, ship1 in enumerate(liveships):
+                    for ship2 in liveships[i + 1:]:
+                        if not ship2.is_respawning and not ship1.is_respawning:
+                            dx = ship1.position[0] - ship2.position[0]
+                            dy = ship1.position[1] - ship2.position[1]
+                            radius_sum = ship1.radius + ship2.radius
+                            # Most of the time no collision occurs, so use early exit to optimize collision check
+                            if abs(dx) <= radius_sum and abs(dy) <= radius_sum and dx * dx + dy * dy <= radius_sum * radius_sum:
+                                ship1.destruct(map_size=scenario.map_size)
+                                ship2.destruct(map_size=scenario.map_size)
+                # Cull ships that are not alive
+                liveships = [ship for ship in liveships if ship.alive]
 
             # Update performance tracker with collisions timing
             if self.perf_tracker:
