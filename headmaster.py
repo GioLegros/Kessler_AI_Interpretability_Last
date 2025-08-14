@@ -27,7 +27,7 @@ class HeadMaster:
         sx, sy = ship_state["position"]
         svx, svy = ship_state["velocity"]
 
-        # Trouver l'astéroïde le plus proche
+        # Find the nearest asteroid
         nearest = min(asteroids, key=lambda a: (a["position"][0]-sx)**2 + (a["position"][1]-sy)**2)
         ax, ay = nearest["position"]
         avx, avy = nearest["velocity"]

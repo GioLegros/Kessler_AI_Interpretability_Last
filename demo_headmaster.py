@@ -21,7 +21,7 @@ for i in range(N):
     heading = (ang * 180.0 / math.pi + 180.0) % 360.0
     ship_states.append({"position": (x, y), "angle": heading})
 
-scenario = Scenario(name="HeadMaster Demo", num_asteroids=6, ship_states=ship_states, map_size=(W, H), time_limit=600.0)
+scenario = Scenario(name="HeadMaster Demo", num_asteroids=3, ship_states=ship_states, map_size=(W, H), time_limit=60.0)
 
 
 # HeadMaster : 2 en black box toutes les 0.5 sec

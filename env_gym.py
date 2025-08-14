@@ -21,7 +21,7 @@ N_CLOSEST_ASTEROIDS = 5
 
 
 class _RLController(KesslerController):
-    """A thin controller that takes actions provided by the RL agent via the env."""
+    """A thin controller that takes actions provided by the RL agent via the env. Dummy controller."""
     def __init__(self) -> None:
         self._ship_id = 0
         self._pending_action: Tuple[float, float] = (0.0, 0.0)
@@ -58,13 +58,13 @@ class KesslerFleeEnv(gym.Env):
 
     def __init__(self,
                  scenario: Optional[Scenario] = None,
-                 time_limit: float = 60.0,         # ← plus long par défaut
+                 time_limit: float = 60.0,         # seconds
                  seed: Optional[int] = None) -> None:
         super().__init__()
         self.n_ast = N_CLOSEST_ASTEROIDS
         self.time_limit = time_limit
 
-        # On garde un scénario “gabarit”, mais on régénère à chaque reset pour diversifier
+        # keep a template scenario, but regenerate on each reset to diversify
         self.base_map_size = (1000, 800)
         if scenario is None:
             scenario = Scenario(
@@ -83,7 +83,7 @@ class KesslerFleeEnv(gym.Env):
         # Observation space
         ship_low = np.array([-1, -1, -1, -1, -1, -1], dtype=np.float32)  # x,y,vx,vy,cos,sin
         ship_high = np.array([1, 1, 1, 1, 1, 1], dtype=np.float32)
-        ast_low = np.array([-1, -1, -1, -1, 0, 0], dtype=np.float32)     # rel x/y/vx/vy [-1,1], dist∈[0,1], radius∈[0,1]
+        ast_low = np.array([-1, -1, -1, -1, 0, 0], dtype=np.float32)     # rel x/y/vx/vy [-1,1], dist in [0,1], radius in [0,1]
         ast_high = np.array([ 1,  1,  1,  1, 1, 1], dtype=np.float32)
         obs_low = np.concatenate([ship_low] + [ast_low for _ in range(self.n_ast)])
         obs_high = np.concatenate([ship_high] + [ast_high for _ in range(self.n_ast)])
@@ -97,7 +97,7 @@ class KesslerFleeEnv(gym.Env):
         self._last_lives = 0
         self._sim_time = 0.0
         self._step_dt = 1.0/30.0  # from TrainerEnvironment default
-        self._last_dist = 0.0     # pour le bonus d’éloignement
+        self._last_dist = 0.0     # flee bonus
 
         self.np_random, _ = gym.utils.seeding.np_random(seed)
 
@@ -151,7 +151,7 @@ class KesslerFleeEnv(gym.Env):
         return np.clip(obs, self.observation_space.low, self.observation_space.high)
 
     def _compute_dist_norm(self, game_state) -> float:
-        """Distance normalisée au plus proche astéroïde."""
+        """normalized distance to the nearest asteroid."""
         ship = game_state["ships"][0]
         map_w, map_h = game_state["map_size"]
         max_dist = math.sqrt(map_w*map_w + map_h*map_h)
@@ -162,20 +162,22 @@ class KesslerFleeEnv(gym.Env):
         return min(nearest / max_dist, 1.0)
 
     def _randomized_scenario(self) -> Scenario:
-        """Nouveau scénario à chaque reset: spawn et heading aléatoires, astéroïdes aléatoires."""
+        """new randomized scenario for each reset."""
         W, H = self.base_map_size
-        # vaisseau aléatoire
+        # random ship position
+        # (avoid edges to prevent immediate collisions)
         sx = random.uniform(W*0.2, W*0.8)
         sy = random.uniform(H*0.2, H*0.8)
         heading = random.uniform(0.0, 360.0)
         ship_state = {"position": (sx, sy), "angle": heading}
 
-        # nombre d’astéroïdes (6 à 10) pour varier la densité
+        # random number of asteroids
+        # (between 6 and 10, to avoid too many collisions)
         n_ast = random.randint(6, 10)
 
         return Scenario(
             name="RL-Flee",
-            num_asteroids=n_ast,       # positions random internes
+            num_asteroids=n_ast,       # randomized position
             ship_states=[ship_state],
             map_size=self.base_map_size,
             time_limit=self.time_limit
@@ -187,14 +189,13 @@ class KesslerFleeEnv(gym.Env):
         if seed is not None:
             self.np_random, _ = gym.utils.seeding.np_random(seed)
 
-        # Nouveau scénario à chaque reset
+        # Reset the game with a new randomized scenario
         self.scenario = self._randomized_scenario()
 
         self.game = TrainerEnvironment(settings={"frequency": 30.0, "time_limit": self.time_limit})
         self.controller = _RLController()
         self.generator = self.game.run_step(self.scenario, [self.controller])
 
-        # état initial (avant toute action) — compatible Gym
         score, perf, game_state = next(self.generator)
         self._last_lives = game_state["ships"][0]["lives_remaining"]
         self._sim_time = 0.0
@@ -213,18 +214,18 @@ class KesslerFleeEnv(gym.Env):
         terminated = False
         truncated = False
 
-        # Avancer une frame — gérer la fin d’épisode proprement
+        # Run the game step with the controller's action
         try:
             score, perf, game_state = next(self.generator)
         except StopIteration as e:
-            # Si le générateur s’achève (limite de temps atteinte côté moteur)
+            # StopIteration means the game ended
             if hasattr(e, "value") and e.value:
                 score, perf, game_state = e.value
             else:
-                # Fallback: faux game_state minimal si jamais
+                # Fallback: no more steps available, use last state
                 game_state = {"ships": [{"lives_remaining": self._last_lives, "position": (0,0), "velocity": (0,0), "heading": 0}],
                               "asteroids": [], "map_size": self.base_map_size, "time": self.time_limit}
-            truncated = True  # fin “time limit”
+            truncated = True  # end of the game
 
         obs = self._normalize(game_state)
 
@@ -233,10 +234,11 @@ class KesslerFleeEnv(gym.Env):
         delta_dist = dist_norm - self._last_dist
         self._last_dist = dist_norm
 
-        # base alive + loin + s’éloigne
+        # basic reward for being alive and moving away from asteroids
+        # (more reward for being very far)
         reward = 0.05 + 1.0 * (dist_norm ** 2) + 0.3 * (delta_dist)
 
-        # Terminaison par mort
+        # end of life
         ship = game_state["ships"][0]
         lives = ship["lives_remaining"]
         if lives < self._last_lives:
@@ -244,7 +246,7 @@ class KesslerFleeEnv(gym.Env):
             terminated = True
         self._last_lives = lives
 
-        # Troncature par limite de temps
+        # end by time limit
         self._sim_time = game_state.get("time", self._sim_time + self._step_dt)
         if (not terminated) and (self._sim_time >= self.time_limit - 1e-6):
             truncated = True

@@ -30,7 +30,7 @@ class NeuralFleeController(KesslerController):
     def actions(self, ship_state, game_state):
         self._load()
 
-        # Encode l'observation SANS dimension batch
+        # encoding the observation
         if not hasattr(self, "_obs_encoder"):
             self._obs_encoder = KesslerFleeEnv(scenario=None, time_limit=game_state["time_limit"])
 
@@ -40,11 +40,11 @@ class NeuralFleeController(KesslerController):
             "map_size": game_state["map_size"],
             "time": game_state["time"]
         }
-        obs = self._obs_encoder._normalize(fake_gs)  # <-- PAS de [None, :]
+        obs = self._obs_encoder._normalize(fake_gs) # Normalize the observation
 
         action, _ = self._policy.predict(obs, deterministic=True)
 
-        # Aplatit/force en 1D au cas où SB3 renverrait (1,2)
+        # Force 1D array
         action = np.asarray(action).reshape(-1)
 
         thrust = float(np.clip(action[0], -1.0, 1.0) * THRUST_MAX)
