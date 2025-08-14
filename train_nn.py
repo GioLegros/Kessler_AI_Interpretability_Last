@@ -1,86 +1,53 @@
-from typing import Dict, Tuple, List
-import numpy as np
-from collections import deque
-from stable_baselines3.common.monitor import Monitor
-from envs.kessler_env import KesslerEnv
-from src.kessler_game import KesslerGame, TrainerEnvironment
-from src.scenario import Scenario
-from Controller.controller_IA import ControllerIA
-from src.controller import KesslerController
+# -*- coding: utf-8 -*-
+# Training script using Stable-Baselines3 (PPO) on the custom Gymnasium env.
+from __future__ import annotations
+import os
+from typing import Optional
+import argparse
+
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.evaluation import evaluate_policy
-import gymnasium as gym 
+from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.logger import configure
 
-THRUST_SCALE, TURN_SCALE = 480.0, 180.0
+from env_gym import KesslerFleeEnv
 
-test_scenario = Scenario(
-    time_limit=60,
-    name="test_scenario",
-    map_size=(1000, 800),
-    asteroid_states=[{"position": (0, 300), "angle": -90.0, "speed": 40},
-                     {"position": (700, 300), "angle": 0.0, "speed": 0}],
-    ship_states=[{"position": (600, 300)}],
-    seed=0
-)
+def make_env(time_limit: float = 30.0):
+    def _thunk():
+        return KesslerFleeEnv(time_limit=time_limit)
+    return _thunk
 
-def train_nn():
-    kessler_env = Monitor(KesslerEnv(test_scenario))
-    model = PPO("MultiInputPolicy", kessler_env)
-    mean_reward, _ = evaluate_policy(model, kessler_env, n_eval_episodes=10)
-    print(f'Initial Mean reward: {mean_reward:.2f}')
+def main(save_dir: str = "models/kessler_ppo", total_timesteps: int = 500_000, time_limit: float = 30.0):
+    os.makedirs(save_dir, exist_ok=True)
+    env = DummyVecEnv([make_env(time_limit)])
+    model = PPO(
+        "MlpPolicy",
+        env,
+        verbose=1,
+        tensorboard_log=os.path.join(save_dir, "tb"),
+        n_steps=2048,
+        batch_size=256,
+        learning_rate=3e-4,
+        gamma=0.995,
+        gae_lambda=0.95,
+        clip_range=0.2
+    )
+    new_logger = configure(save_dir, ["stdout", "csv", "tensorboard"])
+    model.set_logger(new_logger)
 
-    model.learn(5000)
-    mean_reward, _ = evaluate_policy(model, kessler_env, n_eval_episodes=10)
-    print(f'+5000   Mean reward: {mean_reward:.2f}')
-    model.save("out/5k")
+    ckpt_cb = CheckpointCallback(save_freq=50_000 // env.num_envs, save_path=save_dir, name_prefix="ppo_kessler")
+    model.learn(total_timesteps=total_timesteps, callback=ckpt_cb)
+    final_path = os.path.join(save_dir, "ppo_kessler_final.zip")
+    model.save(final_path)
+    print(f"Saved final model to: {final_path}")
 
-    model.learn(50000)
-    mean_reward, _ = evaluate_policy(model, kessler_env, n_eval_episodes=10)
-    print(f'+50000  Mean reward: {mean_reward:.2f}')
-    model.save("out/50k")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save_dir", type=str, default="models/kessler_ppo")
+    parser.add_argument("--steps", type=int, default=500_000)
+    parser.add_argument("--time_limit", type=float, default=30.0)
+    args = parser.parse_args()
+    main(args.save_dir, args.steps, args.time_limit)
 
-    model.learn(500000)
-    mean_reward, _ = evaluate_policy(model, kessler_env, n_eval_episodes=10)
-    print(f'+500000 Mean reward: {mean_reward:.2f}')
-    model.save("out/500k")
 
-    print("Saving")
-    model.save("out/test")
-
-def run_game():
-    kessler_game = KesslerGame()
-    scenario = Scenario(num_asteroids=2, time_limit=180, map_size=(1000, 800))
-    controller = SuperdummyController()
-    score, perf_list, state = kessler_game.run(scenario=scenario, controllers=[controller])
-    print(f"Final Score: {score}")
-
-class SuperdummyController(KesslerController):
-    def __init__(self):
-        self.model= PPO.load("out/50k")
-
-    @property
-    def name(self):
-        return "NN_Controller"
-
-    def actions(self, ship_state: Dict, game_state: Dict) -> Tuple[float, float, bool, bool]:
-        obs = self._get_obs(game_state)
-        action = self.model.predict(obs)
-        thrust, turn = list(action[0])
-#        print(action[0])
-        return thrust * THRUST_SCALE, turn * TURN_SCALE, False, False
-    
-    def _get_obs(self, game_state):
-        # For now, we are assuming only one ship (ours)
-        ship = game_state['ships'][0]
-        obs = {
-            "ship position": np.array(ship['position']),
-            "ship speed": np.array([ship['speed']]),
-            "ship heading": np.array([ship['heading']]),
-        }
-        print(obs['ship position'])
-        return obs
-    
-if __name__ == '__main__':
-    #train_nn()
-    run_game()
+#train python -m train_nn --steps 400000 --save_dir models/kessler_ppo
