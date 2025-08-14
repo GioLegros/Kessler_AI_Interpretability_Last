@@ -50,4 +50,4 @@ if __name__ == "__main__":
     main(args.save_dir, args.steps, args.time_limit)
 
 
-#train python -m train_nn --steps 400000 --save_dir models/kessler_ppo
+#train : python -m train_nn --steps 400000 --save_dir models/kessler_ppo
